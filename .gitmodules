@@ -1,0 +1,3 @@
+[submodule "lib/loquat"]
+	path = lib/loquat
+	url = https://github.com/flychensc/loquat

@@ -4,6 +4,8 @@ project(mango)
 
 add_subdirectory(lib/loquat)
 
+find_package(spdlog REQUIRED)
+
 file(GLOB LIBS src/*.cc)
 add_library(mango ${LIBS})
 target_include_directories(mango PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/include)

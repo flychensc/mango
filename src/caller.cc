@@ -9,11 +9,15 @@ namespace mango
     Caller::Caller(const std::string unix_path) : loquat::Connector(determineDomain(unix_path))
     {
         Bind(unix_path);
+
+        loquat::Epoll::GetInstance().Join(Sock(), shared_from_this());
     }
 
     Caller::Caller(const std::string address, int port) : loquat::Connector(determineDomain(address))
     {
         Bind(address, port);
+
+        loquat::Epoll::GetInstance().Join(Sock(), shared_from_this());
     }
 
     void Caller::start()

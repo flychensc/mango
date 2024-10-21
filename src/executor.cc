@@ -32,11 +32,15 @@ namespace mango
     ExecutorService::ExecutorService(const std::string unix_path) : loquat::Listener(determineDomain(unix_path))
     {
         Listen(unix_path);
+
+        loquat::Epoll::GetInstance().Join(Sock(), shared_from_this());
     }
 
     ExecutorService::ExecutorService(const std::string address, int port) : loquat::Listener(determineDomain(address))
     {
         Listen(address, port);
+
+        loquat::Epoll::GetInstance().Join(Sock(), shared_from_this());
     }
 
     void ExecutorService::OnAccept(int listen_sock)

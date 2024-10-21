@@ -16,10 +16,11 @@ namespace mango
         void start();
         void stop();
 
+        void OnRecv(std::vector<Byte> &data) override final;
+
         void call(Message &message);
 
     private:
-        Caller(int domain, const std::string address, int port);
         std::future<void> fut_;
     };
 }

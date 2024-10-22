@@ -9,7 +9,7 @@ int main(int argc, char *argv[], char *envp[])
 {
     spdlog::set_level(spdlog::level::debug);
 
-    std::shared_ptr<Builder> builder = std::make_shared<ExecutorBuilder>("127.0.0.1", 2012);
+    std::shared_ptr<Builder> builder = std::make_shared<ExecutorServiceBuilder>("127.0.0.1", 2012);
     Director director;
     director.setBuilder(builder);
 

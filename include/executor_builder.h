@@ -2,24 +2,25 @@
 
 #include "builder.h"
 #include "executor.h"
+#include "loquat/include/epoll.h"
 
 namespace mango
 {
-    class ExecutorBuilder : public Builder
+    class ExecutorServiceBuilder : public Builder
     {
     public:
-        ExecutorBuilder(const std::string &unix_path) : Builder(unix_path)
+        ExecutorServiceBuilder(const std::string &unix_path) : Builder(unix_path)
         {
-            pollable_ = std::make_shared<Executor>(unix_path);
+            pollable_ = std::make_shared<ExecutorService>(unix_path);
         }
-        ExecutorBuilder(const std::string &address, int port) : Builder(address, port)
+        ExecutorServiceBuilder(const std::string &address, int port) : Builder(address, port)
         {
-            pollable_ = std::make_shared<Executor>(address, port);
+            pollable_ = std::make_shared<ExecutorService>(address, port);
         }
 
         void joinToEpoll() override
         {
-            auto p_sock = std::dynamic_pointer_cast<Executor>(pollable_);
+            auto p_sock = std::dynamic_pointer_cast<ExecutorService>(pollable_);
             if (p_sock)
             {
                 loquat::Epoll::GetInstance().Join(p_sock->Sock(), p_sock);

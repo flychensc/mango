@@ -14,6 +14,7 @@ namespace mango
         Caller(const std::string &address, int port);
 
         void start();
+        void wait();
         void stop();
 
         void OnRecv(std::vector<Byte> &data) override final;

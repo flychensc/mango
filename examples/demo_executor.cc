@@ -18,8 +18,8 @@ int main(int argc, char *argv[], char *envp[])
     auto p_service = std::dynamic_pointer_cast<ExecutorService>(builder->getResult());
 
     p_service->start();
-
     spdlog::debug("start service");
 
+    p_service->wait();
     return 0;
 }

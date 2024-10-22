@@ -32,6 +32,7 @@ namespace mango
         ExecutorService(const std::string &address, int port);
 
         void start();
+        void wait();
         void stop();
 
         void OnAccept(int listen_sock) override final;

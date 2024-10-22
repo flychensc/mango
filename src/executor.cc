@@ -46,9 +46,7 @@ namespace mango
         spdlog::debug("Accept a executor {}", executor_ptr->Sock());
 
         executor_ptr->registerCloseHandler([this](int sock_fd)
-                                           {
-                                            loquat::Epoll::GetInstance().Leave(sock_fd);
-                                            removeExecutor(sock_fd); });
+                                           { removeExecutor(sock_fd); });
 
         loquat::Epoll::GetInstance().Join(executor_ptr->Sock(), executor_ptr);
         insertExecutor(executor_ptr->Sock(), executor_ptr);
@@ -70,6 +68,11 @@ namespace mango
     {
         fut_ = std::async(std::launch::async, []
                           { loquat::Epoll::GetInstance().Wait(); });
+    }
+
+    void ExecutorService::wait()
+    {
+        fut_.get();
     }
 
     void ExecutorService::stop()

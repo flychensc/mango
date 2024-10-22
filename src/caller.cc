@@ -22,6 +22,11 @@ namespace mango
                           { loquat::Epoll::GetInstance().Wait(); });
     }
 
+    void Caller::wait()
+    {
+        fut_.get();
+    }
+
     void Caller::stop()
     {
         loquat::Epoll::GetInstance().Terminate();

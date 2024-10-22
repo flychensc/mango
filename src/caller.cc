@@ -6,12 +6,12 @@
 
 namespace mango
 {
-    Caller::Caller(const std::string unix_path) : loquat::Connector(determineDomain(unix_path))
+    Caller::Caller(const std::string &unix_path) : loquat::Connector(determineDomain(unix_path))
     {
         Bind(unix_path);
     }
 
-    Caller::Caller(const std::string address, int port) : loquat::Connector(determineDomain(address))
+    Caller::Caller(const std::string &address, int port) : loquat::Connector(determineDomain(address))
     {
         Bind(address, port);
     }

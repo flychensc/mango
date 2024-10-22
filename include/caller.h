@@ -10,8 +10,8 @@ namespace mango
     class Caller : public loquat::Connector
     {
     public:
-        Caller(const std::string unix_path);
-        Caller(const std::string address, int port);
+        Caller(const std::string &unix_path);
+        Caller(const std::string &address, int port);
 
         void start();
         void stop();

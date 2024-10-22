@@ -28,8 +28,8 @@ namespace mango
     class ExecutorService : public loquat::Listener
     {
     public:
-        ExecutorService(const std::string unix_path);
-        ExecutorService(const std::string address, int port);
+        ExecutorService(const std::string &unix_path);
+        ExecutorService(const std::string &address, int port);
 
         void start();
         void stop();

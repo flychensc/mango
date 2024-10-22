@@ -21,11 +21,6 @@ namespace mango
         void call(Message &message);
 
     private:
-        std::shared_ptr<Caller> shared_from_this()
-        {
-            return std::shared_ptr<Caller>(this);
-        }
-
         std::future<void> fut_;
     };
 }

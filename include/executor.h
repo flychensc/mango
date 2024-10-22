@@ -40,11 +40,6 @@ namespace mango
         void removeExecutor(int sock_fd);
 
     private:
-        std::shared_ptr<ExecutorService> shared_from_this()
-        {
-            return std::shared_ptr<ExecutorService>(this);
-        }
-
         std::future<void> fut_;
 
         std::mutex mutex_;

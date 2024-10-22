@@ -7,11 +7,11 @@ namespace mango
     int determineDomain(const std::string &url)
     {
         // IPv4
-        std::regex ipv4Pattern(R"((\d{1,3}\.){3}\d{1,3})");
+        const std::regex ipv4Pattern(R"((\d{1,3}\.){3}\d{1,3})");
         // IPv6
-        std::regex ipv6Pattern(R"(([0-9a-fA-F]{1,4}:){7}[0-9a-fA-F]{1,4}|::|(([0-9a-fA-F]{1,4}:){1,6}:)|(([0-9a-fA-F]{1,4}:){1,5}(:[0-9a-fA-F]{1,4}){1,2}))");
+        const std::regex ipv6Pattern(R"(([0-9a-fA-F]{1,4}:){7}[0-9a-fA-F]{1,4}|(([0-9a-fA-F]{0,6}:):[0-9a-fA-F]{0,4})|(([0-9a-fA-F]{1,4}:){1,6}:)|(([0-9a-fA-F]{1,4}:){1,5}(:[0-9a-fA-F]{1,4}){1,2}))");
         // Unix socket
-        std::regex unixSocketPattern(R"(^/[^/].*)");
+        const std::regex unixSocketPattern(R"(^/[^/].*)");
 
         if (std::regex_match(url, ipv4Pattern))
         {
@@ -27,7 +27,7 @@ namespace mango
         }
         else
         {
-            throw std::invalid_argument("Unsupported address type");
+            throw std::invalid_argument("Unsupported address " + url);
         }
     }
 }

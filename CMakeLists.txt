@@ -3,12 +3,14 @@ cmake_minimum_required(VERSION 3.22.1)
 project(mango)
 
 option(SAMPLE "Enable the sample feature for demonstration purposes." ON)
-option(DEBUG "Enable debug mode for detailed logging and error checking." ON)
+option(DEBUG "Enable debug mode for detailed logging and error checking." OFF)
 option(TEST "Enable building and running unit tests using Google Test." ON)
 
 if (DEBUG)
     set(CMAKE_BUILD_TYPE Debug)
     set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -g")
+else()
+    set(CMAKE_BUILD_TYPE Release)
 endif()
 
 if (TEST)

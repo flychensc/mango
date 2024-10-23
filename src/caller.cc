@@ -37,6 +37,9 @@ namespace mango
     {
         spdlog::debug("Caller recv data");
 
+        // recv header(session id)
+        // recv body
+        
         Message message;
         message.Deserialize(data);
         // todo: locate session

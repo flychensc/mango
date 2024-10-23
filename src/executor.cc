@@ -9,6 +9,9 @@ namespace mango
     {
         spdlog::debug("Executor recv data");
 
+        // recv header(session id)
+        // recv body
+        
         Message message;
         message.Deserialize(data);
         // todo: message.OnCall();

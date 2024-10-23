@@ -39,18 +39,34 @@ namespace mango
 
         Message message;
         message.Deserialize(data);
-        // todo: message.OnCall();
+        // todo: locate session
+        // notify
     }
 
-    void Caller::call(Message &message)
+    void Caller::cast(Message &message)
+    {
+        spdlog::debug("Caller cast executor");
+
+        // send message
+        Enqueue(message.Serialize());
+    }
+
+    std::unique_ptr<Message> Caller::call(Message &message)
     {
         spdlog::debug("Caller call executor");
 
         auto session = session_manager_.createSession();
 
+        // todo: bind session id
+
         // send message
         Enqueue(message.Serialize());
         // wait reply
         session->wait();
+
+        // return reply
+        auto reply = std::make_unique<Message>();
+        reply->Deserialize(session->getContext().reply);
+        return reply;
     }
 }

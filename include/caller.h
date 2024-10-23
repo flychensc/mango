@@ -1,6 +1,7 @@
 #pragma once
 
 #include <future>
+#include <memory>
 
 #include "message.h"
 #include "session_manager.h"
@@ -20,7 +21,8 @@ namespace mango
 
         void OnRecv(std::vector<Byte> &data) override final;
 
-        void call(Message &message);
+        void cast(Message &message);
+        std::unique_ptr<Message> call(Message &message);
 
     private:
         SessionManager session_manager_;

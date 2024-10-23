@@ -3,6 +3,7 @@
 #include <future>
 
 #include "message.h"
+#include "session_manager.h"
 #include "loquat/include/connector.h"
 
 namespace mango
@@ -22,6 +23,7 @@ namespace mango
         void call(Message &message);
 
     private:
+        SessionManager session_manager_;
         std::future<void> fut_;
     };
 }

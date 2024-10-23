@@ -8,6 +8,8 @@ namespace mango
 
     struct Context
     {
+        Context() : is_completed(false) {}
+
         bool is_completed;
         std::vector<Byte> reply;
     };

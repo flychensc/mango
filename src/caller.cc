@@ -46,8 +46,11 @@ namespace mango
     {
         spdlog::debug("Caller call executor");
 
+        auto session = session_manager_.createSession();
+
         // send message
         Enqueue(message.Serialize());
-        // todo: wait reply
+        // wait reply
+        session->wait();
     }
 }

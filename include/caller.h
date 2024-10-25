@@ -2,8 +2,10 @@
 
 #include <future>
 #include <memory>
+#include <mutex>
 
 #include "message.h"
+#include "pack.h"
 #include "session_manager.h"
 #include "loquat/include/connector.h"
 
@@ -19,13 +21,18 @@ namespace mango
         void wait();
         void stop();
 
-        void OnRecv(std::vector<Byte> &data) override final;
-
         void cast(Message &message);
         std::unique_ptr<Message> call(Message &message);
+
+    protected:
+        void OnRecv(const std::vector<Byte> &data) override final;
 
     private:
         SessionManager session_manager_;
         std::future<void> fut_;
+        std::mutex mutex_;
+
+        RecvState recv_state_;
+        std::string last_recv_sess_id_;
     };
 }

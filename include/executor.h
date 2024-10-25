@@ -6,6 +6,7 @@
 #include <mutex>
 #include <unordered_map>
 
+#include "pack.h"
 #include "util.h"
 #include "loquat/include/listener.h"
 
@@ -14,15 +15,20 @@ namespace mango
     class Executor : public loquat::Connection
     {
     public:
-        Executor(int listen_fd) : loquat::Connection(listen_fd) {}
+        Executor(int listen_fd) : loquat::Connection(listen_fd), recv_state_(RecvState::RECV_ID_LENGTH) {}
 
-        void OnRecv(std::vector<loquat::Byte> &data) override final;
         void OnClose(int sock_fd) override final;
 
         void registerCloseHandler(std::function<void(int)> callback);
 
+    protected:
+        void OnRecv(const std::vector<loquat::Byte> &data) override final;
+
     private:
         std::function<void(int)> close_callback_;
+
+        RecvState recv_state_;
+        std::string last_recv_sess_id_;
     };
 
     class ExecutorService : public loquat::Listener

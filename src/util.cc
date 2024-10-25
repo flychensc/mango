@@ -30,4 +30,21 @@ namespace mango
             throw std::invalid_argument("Unsupported address " + url);
         }
     }
+
+    std::vector<loquat::Byte> packHeader(const std::string session_id, size_t message_length)
+    {
+        std::vector<loquat::Byte> header;
+
+        // Length of Session Id
+        header.push_back(session_id.size());
+
+        // Content of Session Id
+        header.insert(header.end(), session_id.begin(), session_id.end());
+
+        // Length of Message
+        header.push_back((message_length >> 8) & 0xFF);
+        header.push_back(message_length & 0xFF);
+
+        return header;
+    }
 }

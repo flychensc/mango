@@ -6,13 +6,15 @@
 
 namespace mango
 {
-    Caller::Caller(const std::string &unix_path) : loquat::Connector(determineDomain(unix_path))
+    Caller::Caller(const std::string &unix_path) : loquat::Connector(determineDomain(unix_path)), recv_state_(RecvState::RECV_ID_LENGTH)
     {
+        SetBytesNeeded(1);
         Bind(unix_path);
     }
 
-    Caller::Caller(const std::string &address, int port) : loquat::Connector(determineDomain(address))
+    Caller::Caller(const std::string &address, int port) : loquat::Connector(determineDomain(address)), recv_state_(RecvState::RECV_ID_LENGTH)
     {
+        SetBytesNeeded(1);
         Bind(address, port);
     }
 
@@ -33,25 +35,78 @@ namespace mango
         fut_.wait();
     }
 
-    void Caller::OnRecv(std::vector<Byte> &data)
+    void Caller::OnRecv(const std::vector<Byte> &data)
     {
         spdlog::debug("Caller recv data");
 
-        // recv header(session id)
-        // recv body
-        
-        Message message;
-        message.Deserialize(data);
-        // todo: locate session
-        // notify
+        switch (recv_state_)
+        {
+        case RecvState::RECV_ID_LENGTH:
+            spdlog::debug("RECV_ID_LENGTH");
+            // action
+            {
+                SetBytesNeeded(data[0]);
+            }
+            // next state
+            recv_state_ = RecvState::RECV_ID_VALUE;
+            break;
+
+        case RecvState::RECV_ID_VALUE:
+            spdlog::debug("RECV_ID_VALUE");
+            // action
+            {
+                last_recv_sess_id_.assign(data.begin(), data.end());
+            }
+            // next state
+            recv_state_ = RecvState::RECV_MSG_LENGTH;
+            break;
+
+        case RecvState::RECV_MSG_LENGTH:
+            spdlog::debug("RECV_MSG_LENGTH");
+            // action
+            {
+                SetBytesNeeded(((data[0] & 0xFFU) << 8) | (data[1] & 0xFFU));
+            }
+            // next state
+            recv_state_ = RecvState::RECV_MSG_VALUE;
+            break;
+
+        case RecvState::RECV_MSG_VALUE:
+            spdlog::debug("RECV_MSG_VALUE");
+            // action
+            {
+                // locate session
+                auto session = session_manager_.getSession(last_recv_sess_id_);
+                if (session)
+                {
+                    session->getContext().reply = data;
+                    // notify
+                    session->notify();
+                }
+            }
+            // next state
+            recv_state_ = RecvState::RECV_ID_LENGTH;
+            break;
+        }
     }
 
     void Caller::cast(Message &message)
     {
         spdlog::debug("Caller cast executor");
 
-        // send message
-        Enqueue(message.Serialize());
+        auto session = session_manager_.createSession();
+
+        {
+            std::lock_guard<std::mutex> lock(mutex_);
+            // Serialize Message
+            auto data = message.Serialize();
+            // Enqueue Header
+            Enqueue(packHeader(session->getId(), data.size()));
+            // Enqueue Message
+            Enqueue(data);
+        }
+
+        session_manager_.removeSession(session->getId());
     }
 
     std::unique_ptr<Message> Caller::call(Message &message)
@@ -60,10 +115,15 @@ namespace mango
 
         auto session = session_manager_.createSession();
 
-        // todo: bind session id
-
-        // send message
-        Enqueue(message.Serialize());
+        {
+            std::lock_guard<std::mutex> lock(mutex_);
+            // Serialize Message
+            auto data = message.Serialize();
+            // Enqueue Header
+            Enqueue(packHeader(session->getId(), data.size()));
+            // Enqueue Message
+            Enqueue(data);
+        }
         // wait reply
         session->wait();
 

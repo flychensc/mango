@@ -5,16 +5,64 @@
 
 namespace mango
 {
-    void Executor::OnRecv(std::vector<loquat::Byte> &data)
+    void Executor::OnRecv(const std::vector<loquat::Byte> &data)
     {
         spdlog::debug("Executor recv data");
 
-        // recv header(session id)
-        // recv body
-        
-        Message message;
-        message.Deserialize(data);
-        // todo: message.OnCall();
+        switch (recv_state_)
+        {
+        case RecvState::RECV_ID_LENGTH:
+            spdlog::debug("RECV_ID_LENGTH");
+            // action
+            {
+                SetBytesNeeded(data[0]);
+            }
+            // next state
+            recv_state_ = RecvState::RECV_ID_VALUE;
+            break;
+
+        case RecvState::RECV_ID_VALUE:
+            spdlog::debug("RECV_ID_VALUE");
+            // action
+            {
+                last_recv_sess_id_.assign(data.begin(), data.end());
+            }
+            // next state
+            recv_state_ = RecvState::RECV_MSG_LENGTH;
+            break;
+
+        case RecvState::RECV_MSG_LENGTH:
+            spdlog::debug("RECV_MSG_LENGTH");
+            // action
+            {
+                SetBytesNeeded(((data[0] & 0xFFU) << 8) | (data[1] & 0xFFU));
+            }
+            // next state
+            recv_state_ = RecvState::RECV_MSG_VALUE;
+            break;
+
+        case RecvState::RECV_MSG_VALUE:
+            spdlog::debug("RECV_MSG_VALUE");
+            // action
+            {
+                // Deserialize Message
+                Message message;
+                message.Deserialize(data);
+
+                // Execute
+                Context context;
+                message.OnCall(context);
+
+                // Enqueue Header
+                Enqueue(packHeader(last_recv_sess_id_, context.reply.size()));
+                // Enqueue Reply
+                Enqueue(context.reply);
+                context.is_completed = true;
+            }
+            // next state
+            recv_state_ = RecvState::RECV_ID_LENGTH;
+            break;
+        }
     }
 
     void Executor::OnClose(int sock_fd)

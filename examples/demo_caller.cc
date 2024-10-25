@@ -2,6 +2,7 @@
 #include <spdlog/spdlog.h>
 #include "caller_builder.h"
 #include "director.h"
+#include "demo_message.h"
 
 using namespace mango;
 
@@ -25,7 +26,8 @@ int main(int argc, char *argv[], char *envp[])
 
     spdlog::debug("caller connect");
 
-    // p_caller->call();
+    PingMessage ping;
+    auto reply = p_caller->call(ping);
     std::this_thread::sleep_for(std::chrono::seconds(3));
 
     spdlog::debug("caller stop");

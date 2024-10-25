@@ -15,6 +15,9 @@ namespace mango
 
         virtual void OnCall(Context &context) {}
 
+    protected:
+        void setBody(const std::vector<Byte> body) { body_ = body; }
+
     private:
         std::vector<Byte> body_;
     };

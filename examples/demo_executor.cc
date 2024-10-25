@@ -2,6 +2,7 @@
 #include <spdlog/spdlog.h>
 #include "executor_builder.h"
 #include "director.h"
+#include "demo_message.h"
 
 using namespace mango;
 

@@ -23,6 +23,25 @@ namespace
         }
     }
 
+    TEST(SessionManager, creatd)
+    {
+        mango::SessionManager sessMgr;
+
+        auto sess_1 = sessMgr.createSession();
+        auto sess_2 = sessMgr.createSession();
+
+        EXPECT_NE(sessMgr.getSession(sess_1->getId()), nullptr);
+        EXPECT_NE(sessMgr.getSession(sess_2->getId()), nullptr);
+
+        sessMgr.removeSession(sess_1->getId());
+        EXPECT_EQ(sessMgr.getSession(sess_1->getId()), nullptr);
+        EXPECT_NE(sessMgr.getSession(sess_2->getId()), nullptr);
+
+        sessMgr.removeSession(sess_2->getId());
+        EXPECT_EQ(sessMgr.getSession(sess_1->getId()), nullptr);
+        EXPECT_EQ(sessMgr.getSession(sess_2->getId()), nullptr);
+    }
+
     TEST(Session, confirmReference)
     {
         mango::SessionManager sessMgr;

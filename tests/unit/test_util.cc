@@ -32,4 +32,17 @@ namespace
         EXPECT_EQ(mango::determineDomain("/home/june"), AF_UNIX);
         ASSERT_THROW(mango::determineDomain("//tmp"), std::invalid_argument);
     }
+
+    TEST(UTIL, packHeader)
+    {
+        std::string id = "1234";
+
+        auto data = mango::packHeader(id, 0x12345678);
+        EXPECT_EQ(data[0], 4);
+        EXPECT_EQ(std::string(data.begin()+1, data.begin()+1+4), id);
+        EXPECT_EQ(data[6], 0x12);
+        EXPECT_EQ(data[7], 0x34);
+        EXPECT_EQ(data[8], 0x56);
+        EXPECT_EQ(data[9], 0x78);
+    }
 }

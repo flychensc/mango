@@ -1,5 +1,5 @@
 #include "executor.h"
-#include "message.h"
+#include "message_creator.h"
 #include <spdlog/spdlog.h>
 #include "loquat/include/epoll.h"
 
@@ -55,13 +55,12 @@ namespace mango
             // action
             {
                 // Deserialize Message
-                Message message;
-                message.Deserialize(data);
-                spdlog::debug("message id {}", message.Id);
+                auto message = MessageCreator::Deserialize(data);
+                spdlog::debug("message type {}", message->Type);
 
                 // Execute
                 Context context;
-                message.OnCall(context);
+                message->OnCall(context);
 
                 if (context.reply.size() > 0)
                 {

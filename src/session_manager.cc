@@ -9,13 +9,20 @@ namespace mango
     std::shared_ptr<Session> SessionManager::createSession()
     {
         std::lock_guard<std::mutex> lock(mutex_);
-        return std::make_shared<Session>(generateSessionId());
+        auto session = std::make_shared<Session>(generateSessionId());
+        if (sessions_.find(session->getId()) != sessions_.end())
+        {
+            throw std::runtime_error("Duplicanted session " + session->getId());
+        }
+        sessions_[session->getId()] = session;
+        return session;
     }
 
     std::shared_ptr<Session> SessionManager::getSession(const std::string &id)
     {
         std::lock_guard<std::mutex> lock(mutex_);
-        return sessions_.at(id);
+
+        return (sessions_.find(id) != sessions_.end()) ? sessions_.at(id) : nullptr;
     }
 
     void SessionManager::removeSession(const std::string &id)

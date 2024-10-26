@@ -7,7 +7,7 @@ namespace mango
     class Message
     {
     public:
-        u_int32_t Id;
+        u_int32_t Type;
 
         std::vector<Byte> Serialize();
 

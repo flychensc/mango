@@ -1,5 +1,5 @@
 #include "caller.h"
-#include "message.h"
+#include "message_creator.h"
 #include "util.h"
 #include <spdlog/spdlog.h>
 #include "loquat/include/epoll.h"
@@ -37,8 +37,6 @@ namespace mango
 
     void Caller::OnRecv(const std::vector<Byte> &data)
     {
-        spdlog::debug("Caller recv data");
-
         switch (recv_state_)
         {
         case RecvState::RECV_ID_LENGTH:
@@ -113,6 +111,7 @@ namespace mango
             Enqueue(data);
         }
 
+        // remove session
         session_manager_.removeSession(session->getId());
     }
 
@@ -135,8 +134,13 @@ namespace mango
         session->wait();
 
         // return reply
-        auto reply = std::make_unique<Message>();
-        reply->Deserialize(session->getContext().reply);
+        auto reply = MessageCreator::Deserialize(session->getContext().reply);
+        spdlog::debug("reply type {}", reply->Type);
+
+        // remove session
+        session_manager_.removeSession(session->getId());
+
+        // return reply
         return reply;
     }
 }

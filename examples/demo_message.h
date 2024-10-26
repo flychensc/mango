@@ -7,12 +7,18 @@
 
 namespace mango
 {
+    enum DemoMessage
+    {
+        PING = 1,
+        PONG = 2,
+    };
+
     class PongMessage : public Message
     {
     public:
         PongMessage()
         {
-            Id = 2;
+            Type = PONG;
             setBody("PONG");
         }
 
@@ -33,7 +39,7 @@ namespace mango
     public:
         PingMessage()
         {
-            Id = 1;
+            Type = PING;
             setBody("PING");
         }
 
@@ -51,4 +57,14 @@ namespace mango
             Message::setBody(std::vector<loquat::Byte>(str.begin(), str.end()));
         }
     };
+
+    std::unique_ptr<Message> createPingMessage()
+    {
+        return std::make_unique<PingMessage>();
+    }
+
+    std::unique_ptr<Message> createPongMessage()
+    {
+        return std::make_unique<PongMessage>();
+    }
 }

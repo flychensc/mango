@@ -27,7 +27,11 @@ int main(int argc, char *argv[], char *envp[])
     spdlog::debug("caller connect");
 
     PingMessage ping;
+    p_caller->cast(ping);
+    std::this_thread::sleep_for(std::chrono::milliseconds(500));
     auto reply = p_caller->call(ping);
+    Context ctx;
+    reply->OnCall(ctx);
     std::this_thread::sleep_for(std::chrono::seconds(3));
 
     spdlog::debug("caller stop");

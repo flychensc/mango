@@ -5,10 +5,13 @@
 
 namespace mango
 {
+    Executor::Executor(int listen_fd) : loquat::Connection(Stream::Type::Framed, listen_fd), recv_state_(RecvState::RECV_ID_LENGTH)
+    {
+        SetBytesNeeded(1);
+    }
+
     void Executor::OnRecv(const std::vector<loquat::Byte> &data)
     {
-        spdlog::debug("Executor recv data");
-
         switch (recv_state_)
         {
         case RecvState::RECV_ID_LENGTH:
@@ -26,6 +29,9 @@ namespace mango
             // action
             {
                 last_recv_sess_id_.assign(data.begin(), data.end());
+                SetBytesNeeded(2);
+
+                spdlog::debug("last_recv_sess_id_ {}", last_recv_sess_id_);
             }
             // next state
             recv_state_ = RecvState::RECV_MSG_LENGTH;
@@ -35,7 +41,10 @@ namespace mango
             spdlog::debug("RECV_MSG_LENGTH");
             // action
             {
-                SetBytesNeeded(((data[0] & 0xFFU) << 8) | (data[1] & 0xFFU));
+                u_int16_t length = (((data[0] & 0xFFU) << 8) | (data[1] & 0xFFU));
+                SetBytesNeeded(length);
+
+                spdlog::debug("Message length {}", length);
             }
             // next state
             recv_state_ = RecvState::RECV_MSG_VALUE;
@@ -48,16 +57,27 @@ namespace mango
                 // Deserialize Message
                 Message message;
                 message.Deserialize(data);
+                spdlog::debug("message id {}", message.Id);
 
                 // Execute
                 Context context;
                 message.OnCall(context);
 
-                // Enqueue Header
-                Enqueue(packHeader(last_recv_sess_id_, context.reply.size()));
-                // Enqueue Reply
-                Enqueue(context.reply);
-                context.is_completed = true;
+                if (context.reply.size() > 0)
+                {
+                    // Enqueue Header
+                    Enqueue(packHeader(last_recv_sess_id_, context.reply.size()));
+                    // Enqueue Reply
+                    Enqueue(context.reply);
+                    context.is_completed = true;
+
+                    spdlog::debug("reply {} bytes", context.reply.size());
+                }
+                else
+                {
+                    spdlog::debug("nothing to reply");
+                }
+                SetBytesNeeded(1);
             }
             // next state
             recv_state_ = RecvState::RECV_ID_LENGTH;

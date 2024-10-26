@@ -6,13 +6,13 @@
 
 namespace mango
 {
-    Caller::Caller(const std::string &unix_path) : loquat::Connector(determineDomain(unix_path)), recv_state_(RecvState::RECV_ID_LENGTH)
+    Caller::Caller(const std::string &unix_path) : loquat::Connector(Stream::Type::Framed, determineDomain(unix_path)), recv_state_(RecvState::RECV_ID_LENGTH)
     {
         SetBytesNeeded(1);
         Bind(unix_path);
     }
 
-    Caller::Caller(const std::string &address, int port) : loquat::Connector(determineDomain(address)), recv_state_(RecvState::RECV_ID_LENGTH)
+    Caller::Caller(const std::string &address, int port) : loquat::Connector(Stream::Type::Framed, determineDomain(address)), recv_state_(RecvState::RECV_ID_LENGTH)
     {
         SetBytesNeeded(1);
         Bind(address, port);
@@ -56,6 +56,9 @@ namespace mango
             // action
             {
                 last_recv_sess_id_.assign(data.begin(), data.end());
+                SetBytesNeeded(2);
+
+                spdlog::debug("last_recv_sess_id_ {}", last_recv_sess_id_);
             }
             // next state
             recv_state_ = RecvState::RECV_MSG_LENGTH;
@@ -65,7 +68,10 @@ namespace mango
             spdlog::debug("RECV_MSG_LENGTH");
             // action
             {
-                SetBytesNeeded(((data[0] & 0xFFU) << 8) | (data[1] & 0xFFU));
+                u_int16_t length = (((data[0] & 0xFFU) << 8) | (data[1] & 0xFFU));
+                SetBytesNeeded(length);
+
+                spdlog::debug("Message length {}", length);
             }
             // next state
             recv_state_ = RecvState::RECV_MSG_VALUE;
@@ -83,6 +89,7 @@ namespace mango
                     // notify
                     session->notify();
                 }
+                SetBytesNeeded(1);
             }
             // next state
             recv_state_ = RecvState::RECV_ID_LENGTH;

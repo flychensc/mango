@@ -15,7 +15,7 @@ namespace mango
     class Executor : public loquat::Connection
     {
     public:
-        Executor(int listen_fd) : loquat::Connection(listen_fd), recv_state_(RecvState::RECV_ID_LENGTH) {}
+        Executor(int listen_fd);
 
         void OnClose(int sock_fd) override final;
 

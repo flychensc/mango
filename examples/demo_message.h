@@ -1,18 +1,24 @@
 #pragma once
 
+#include <iostream>
 #include <string>
 
 #include "message.h"
 
 namespace mango
 {
-    class PingMessage : public Message
+    class PongMessage : public Message
     {
     public:
-        PingMessage()
+        PongMessage()
         {
-            Id = 1;
-            setBody("PING");
+            Id = 2;
+            setBody("PONG");
+        }
+
+        void OnCall(Context &context) override
+        {
+            std::cout << "PONG" << std::endl;
         }
 
     private:
@@ -22,13 +28,21 @@ namespace mango
         }
     };
 
-    class PongMessage : public Message
+    class PingMessage : public Message
     {
     public:
-        PongMessage()
+        PingMessage()
         {
-            Id = 2;
+            Id = 1;
             setBody("PING");
+        }
+
+        void OnCall(Context &context) override
+        {
+            std::cout << "PING" << std::endl;
+
+            // set reply
+            context.reply = PongMessage().Serialize();
         }
 
     private:

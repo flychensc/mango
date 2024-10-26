@@ -12,11 +12,11 @@ namespace mango
     class MessageCreator
     {
     public:
-        using CreatorFunction = std::function<std::unique_ptr<Message>()>;
+        using CreatorFunction = std::function<std::shared_ptr<Message>()>;
 
         static void registerMessageType(int type, CreatorFunction creator);
 
-        static std::unique_ptr<Message> Deserialize(const std::vector<loquat::Byte> &data);
+        static std::shared_ptr<Message> Deserialize(const std::vector<loquat::Byte> &data);
 
     private:
         static std::unordered_map<int, CreatorFunction> creators_;

@@ -14,7 +14,7 @@ namespace mango
         creators_[type] = creator;
     }
 
-    std::unique_ptr<Message> MessageCreator::Deserialize(const std::vector<loquat::Byte> &data)
+    std::shared_ptr<Message> MessageCreator::Deserialize(const std::vector<loquat::Byte> &data)
     {
         if (data.size() < 4)
         {

@@ -58,13 +58,13 @@ namespace mango
         }
     };
 
-    std::unique_ptr<Message> createPingMessage()
+    std::shared_ptr<Message> createPingMessage()
     {
-        return std::make_unique<PingMessage>();
+        return std::make_shared<PingMessage>();
     }
 
-    std::unique_ptr<Message> createPongMessage()
+    std::shared_ptr<Message> createPongMessage()
     {
-        return std::make_unique<PongMessage>();
+        return std::make_shared<PongMessage>();
     }
 }

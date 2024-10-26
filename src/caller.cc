@@ -115,7 +115,7 @@ namespace mango
         session_manager_.removeSession(session->getId());
     }
 
-    std::unique_ptr<Message> Caller::call(Message &message)
+    std::shared_ptr<Message> Caller::call(Message &message)
     {
         spdlog::debug("Caller call executor");
 

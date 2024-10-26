@@ -22,7 +22,7 @@ namespace mango
         void stop();
 
         void cast(Message &message);
-        std::unique_ptr<Message> call(Message &message);
+        std::shared_ptr<Message> call(Message &message);
 
     protected:
         void OnRecv(const std::vector<Byte> &data) override final;

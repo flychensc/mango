@@ -36,7 +36,7 @@ int main(int argc, char *argv[], char *envp[])
     auto reply = p_caller->call(ping);
     Context ctx;
     reply->OnCall(ctx);
-    std::this_thread::sleep_for(std::chrono::seconds(3));
+    std::this_thread::sleep_for(std::chrono::milliseconds(500));
 
     spdlog::debug("caller stop");
 

@@ -1,4 +1,5 @@
 #include <memory>
+#include <future>
 #include <spdlog/spdlog.h>
 #include "caller_builder.h"
 #include "director.h"
@@ -22,7 +23,8 @@ int main(int argc, char *argv[], char *envp[])
 
     auto p_caller = std::dynamic_pointer_cast<Caller>(builder->getResult());
 
-    p_caller->start();
+    std::future fut = std::async(std::launch::async, []
+                                 { loquat::Epoll::GetInstance().Wait(); });
 
     spdlog::debug("start caller");
 
@@ -38,6 +40,7 @@ int main(int argc, char *argv[], char *envp[])
 
     spdlog::debug("caller stop");
 
-    p_caller->stop();
+    loquat::Epoll::GetInstance().Terminate();
+    fut.get();
     return 0;
 }

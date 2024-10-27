@@ -1,6 +1,5 @@
 #pragma once
 
-#include <future>
 #include <memory>
 #include <mutex>
 
@@ -16,19 +15,6 @@ namespace mango
     public:
         Caller(const std::string &unix_path);
         Caller(const std::string &address, int port);
-
-        /**
-         * @brief Start new thread for RPC
-         */
-        void start();
-        /**
-         * @brief Wait for the RPC thread to end
-         */
-        void wait();
-        /**
-         * @brief Stop RPC thread
-         */
-        void stop();
 
         /**
          * @brief Send messages that don't require a reply
@@ -47,7 +33,6 @@ namespace mango
 
     private:
         SessionManager session_manager_;
-        std::future<void> fut_;
         std::mutex mutex_;
 
         RecvState recv_state_;

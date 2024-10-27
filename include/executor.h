@@ -1,7 +1,6 @@
 #pragma once
 
 #include <functional>
-#include <future>
 #include <memory>
 #include <mutex>
 #include <unordered_map>
@@ -37,27 +36,12 @@ namespace mango
         ExecutorService(const std::string &unix_path);
         ExecutorService(const std::string &address, int port);
 
-        /**
-         * @brief Start new thread for RPC
-         */
-        void start();
-        /**
-         * @brief Wait for the RPC thread to end
-         */
-        void wait();
-        /**
-         * @brief Stop RPC thread
-         */
-        void stop();
-
         void OnAccept(int listen_sock) override final;
 
         void insertExecutor(int sock_fd, std::shared_ptr<Executor> ptr);
         void removeExecutor(int sock_fd);
 
     private:
-        std::future<void> fut_;
-
         std::mutex mutex_;
         std::unordered_map<int, std::shared_ptr<Executor>> executors_;
     };

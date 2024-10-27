@@ -2,7 +2,6 @@
 #include "message_creator.h"
 #include "util.h"
 #include <spdlog/spdlog.h>
-#include "loquat/include/epoll.h"
 
 namespace mango
 {
@@ -16,23 +15,6 @@ namespace mango
     {
         SetBytesNeeded(1);
         Bind(address, port);
-    }
-
-    void Caller::start()
-    {
-        fut_ = std::async(std::launch::async, []
-                          { loquat::Epoll::GetInstance().Wait(); });
-    }
-
-    void Caller::wait()
-    {
-        fut_.get();
-    }
-
-    void Caller::stop()
-    {
-        loquat::Epoll::GetInstance().Terminate();
-        fut_.wait();
     }
 
     void Caller::OnRecv(const std::vector<Byte> &data)

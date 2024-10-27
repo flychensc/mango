@@ -133,21 +133,4 @@ namespace mango
         std::lock_guard<std::mutex> lock(mutex_);
         executors_.erase(sock_fd);
     }
-
-    void ExecutorService::start()
-    {
-        fut_ = std::async(std::launch::async, []
-                          { loquat::Epoll::GetInstance().Wait(); });
-    }
-
-    void ExecutorService::wait()
-    {
-        fut_.get();
-    }
-
-    void ExecutorService::stop()
-    {
-        loquat::Epoll::GetInstance().Terminate();
-        fut_.wait();
-    }
 }

@@ -1,4 +1,7 @@
+#include <atomic>
 #include <memory>
+#include <future>
+#include <thread>
 
 #include "caller_builder.h"
 #include "executor_builder.h"
@@ -9,8 +12,6 @@
 
 namespace
 {
-    static bool s_init_flag;
-
     class TestMessage : public mango::Message
     {
     public:
@@ -44,6 +45,69 @@ namespace
         return std::make_shared<TestMessage>();
     }
 
+    class SharedControl
+    {
+    private:
+        static std::atomic<bool> isRunning;
+        static std::future<void> fut;
+
+        static std::shared_ptr<mango::ExecutorService> rpc_service;
+
+        static void createService()
+        {
+            std::shared_ptr<mango::Builder> builder = std::make_shared<mango::ExecutorServiceBuilder>("127.0.0.1", 2012);
+            mango::Director director;
+            director.setBuilder(builder);
+
+            director.construct();
+
+            rpc_service = std::dynamic_pointer_cast<mango::ExecutorService>(builder->getResult());
+        }
+
+        static void createCaller()
+        {
+            std::shared_ptr<mango::Builder> builder = std::make_shared<mango::CallerBuilder>("127.0.0.1", 2024);
+            mango::Director director;
+            director.setBuilder(builder);
+
+            director.construct();
+
+            rpc_caller = std::dynamic_pointer_cast<mango::Caller>(builder->getResult());
+
+            rpc_caller->Connect("127.0.0.1", 2012);
+        }
+
+    public:
+        static std::shared_ptr<mango::Caller> rpc_caller;
+
+        static void start()
+        {
+            if (!isRunning.exchange(true))
+            {
+                mango::MessageCreator::registerMessageType(8515, createTestMessage);
+                createService();
+                createCaller();
+
+                fut = std::async(std::launch::async, []
+                                 { loquat::Epoll::GetInstance().Wait(); });
+            }
+        }
+
+        static void stop()
+        {
+            if (isRunning.exchange(false))
+            {
+                loquat::Epoll::GetInstance().Terminate();
+                fut.get();
+            }
+        }
+    };
+
+    std::atomic<bool> SharedControl::isRunning(false);
+    std::future<void> SharedControl::fut;
+    std::shared_ptr<mango::ExecutorService> SharedControl::rpc_service;
+    std::shared_ptr<mango::Caller> SharedControl::rpc_caller;
+
     class RpcTest : public ::testing::Test
     {
     public:
@@ -51,14 +115,14 @@ namespace
         {
             TestMessage request;
             request.setMessage("Happy to see you, Emmy~");
-            rpc_caller_->cast(request);
+            SharedControl::rpc_caller->cast(request);
         }
 
         void testCall()
         {
             TestMessage request;
             request.setMessage("Happy to see you, Emmy~");
-            auto reply = rpc_caller_->call(request);
+            auto reply = SharedControl::rpc_caller->call(request);
             auto message = std::dynamic_pointer_cast<TestMessage>(reply);
             EXPECT_NE(message, nullptr);
             EXPECT_EQ(message->getMessage(), "Good to see you, Emma~");
@@ -70,7 +134,7 @@ namespace
             request.setMessage("Happy to see you, Emmy~");
             for (int i = 0; i < 1024; i++)
             {
-                rpc_caller_->cast(request);
+                SharedControl::rpc_caller->cast(request);
             }
         }
 
@@ -80,61 +144,26 @@ namespace
             request.setMessage("Happy to see you, Emmy~");
             for (int i = 0; i < 1024; i++)
             {
-                auto reply = rpc_caller_->call(request);
+                auto reply = SharedControl::rpc_caller->call(request);
                 auto message = std::dynamic_pointer_cast<TestMessage>(reply);
                 EXPECT_NE(message, nullptr);
                 EXPECT_EQ(message->getMessage(), "Good to see you, Emma~");
             }
         }
 
+        void testEnd()
+        {
+            SharedControl::stop();
+        }
+
     protected:
         void SetUp() override
         {
-            if (s_init_flag)
-            {
-                mango::MessageCreator::registerMessageType(8515, createTestMessage);
-                createService();
-                createCaller();
-            }
-            s_init_flag = true;
+            SharedControl::start();
         }
 
         void TearDown() override
         {
-            rpc_caller_->stop();
-            rpc_service_->stop();
-        }
-
-    private:
-        std::shared_ptr<mango::ExecutorService> rpc_service_;
-        std::shared_ptr<mango::Caller> rpc_caller_;
-
-        void createService()
-        {
-            std::shared_ptr<mango::Builder> builder = std::make_shared<mango::ExecutorServiceBuilder>("127.0.0.1", 2012);
-            mango::Director director;
-            director.setBuilder(builder);
-
-            director.construct();
-
-            rpc_service_ = std::dynamic_pointer_cast<mango::ExecutorService>(builder->getResult());
-
-            rpc_service_->start();
-        }
-
-        void createCaller()
-        {
-            std::shared_ptr<mango::Builder> builder = std::make_shared<mango::CallerBuilder>("127.0.0.1", 2024);
-            mango::Director director;
-            director.setBuilder(builder);
-
-            director.construct();
-
-            rpc_caller_ = std::dynamic_pointer_cast<mango::Caller>(builder->getResult());
-
-            rpc_caller_->start();
-
-            rpc_caller_->Connect("127.0.0.1", 2012);
         }
     };
 
@@ -150,9 +179,16 @@ namespace
 
     TEST_F(RpcTest, testCast1K)
     {
+        testCast1K();
     }
 
     TEST_F(RpcTest, testCall1K)
     {
+        testCall1K();
+    }
+
+    TEST_F(RpcTest, testEnd)
+    {
+        testEnd();
     }
 }

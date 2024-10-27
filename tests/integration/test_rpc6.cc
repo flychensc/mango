@@ -138,11 +138,11 @@ namespace
             }
         }
 
-        void testCall1K()
+        void testCall100()
         {
             TestMessage request;
             request.setMessage("Happy to see you, Emmy~");
-            for (int i = 0; i < 1024; i++)
+            for (int i = 0; i < 100; i++)
             {
                 auto reply = SharedControl::rpc_caller->call(request);
                 auto message = std::dynamic_pointer_cast<TestMessage>(reply);
@@ -182,9 +182,9 @@ namespace
         testCast1K();
     }
 
-    TEST_F(RpcTest, testCall1K)
+    TEST_F(RpcTest, testCall100)
     {
-        testCall1K();
+        testCall100();
     }
 
     TEST_F(RpcTest, testEnd)

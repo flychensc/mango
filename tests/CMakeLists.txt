@@ -20,7 +20,7 @@ foreach(test_file IN LISTS test_files)
     get_filename_component(file_name ${test_file} NAME_WE)
 
     add_executable(${file_name} ${test_file})
-    target_link_libraries(${file_name} mango GTest::GTest GTest::Main)
+    target_link_libraries(${file_name} mango loquat GTest::GTest GTest::Main)
 
     list(APPEND test_cmds ${file_name})
 endforeach()

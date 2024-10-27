@@ -17,6 +17,7 @@ namespace mango
 
     protected:
         void setBody(const std::vector<Byte> body) { body_ = body; }
+        std::vector<Byte> getBody() { return body_; }
 
     private:
         std::vector<Byte> body_;

@@ -33,6 +33,8 @@ namespace mango
     class ExecutorService : public loquat::Listener
     {
     public:
+        static const int kMaxConnections = 10;
+
         ExecutorService(const std::string &unix_path);
         ExecutorService(const std::string &address, int port);
 

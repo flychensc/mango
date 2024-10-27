@@ -99,12 +99,12 @@ namespace mango
         close_callback_ = callback;
     }
 
-    ExecutorService::ExecutorService(const std::string &unix_path) : loquat::Listener(determineDomain(unix_path))
+    ExecutorService::ExecutorService(const std::string &unix_path) : loquat::Listener(determineDomain(unix_path), kMaxConnections)
     {
         Listen(unix_path);
     }
 
-    ExecutorService::ExecutorService(const std::string &address, int port) : loquat::Listener(determineDomain(address))
+    ExecutorService::ExecutorService(const std::string &address, int port) : loquat::Listener(determineDomain(address), kMaxConnections)
     {
         Listen(address, port);
     }

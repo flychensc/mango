@@ -14,6 +14,11 @@ namespace mango
     public:
         using CreatorFunction = std::function<std::shared_ptr<Message>()>;
 
+        /**
+         * @brief Register a new message type
+         * @param type New message type
+         * @param creator The function that creates the new message
+        */
         static void registerMessageType(int type, CreatorFunction creator);
 
         static std::shared_ptr<Message> Deserialize(const std::vector<loquat::Byte> &data);

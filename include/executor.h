@@ -37,8 +37,17 @@ namespace mango
         ExecutorService(const std::string &unix_path);
         ExecutorService(const std::string &address, int port);
 
+        /**
+         * @brief Start new thread for RPC
+         */
         void start();
+        /**
+         * @brief Wait for the RPC thread to end
+         */
         void wait();
+        /**
+         * @brief Stop RPC thread
+         */
         void stop();
 
         void OnAccept(int listen_sock) override final;

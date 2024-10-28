@@ -26,6 +26,7 @@ namespace mango
     CycleTimer::~CycleTimer()
     {
         close(timer_fd_);
+        spdlog::debug("~CycleTimer {}", timer_fd_);
     }
 
     void CycleTimer::OnRead(int sock_fd)

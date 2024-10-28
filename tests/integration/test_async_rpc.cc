@@ -1,6 +1,7 @@
 #include <atomic>
 #include <memory>
 #include <future>
+#include <queue>
 #include <thread>
 
 #include "caller_builder.h"
@@ -45,6 +46,50 @@ namespace
         return std::make_shared<TestMessage>();
     }
 
+    class SlowMessage : public mango::Message
+    {
+    public:
+        SlowMessage()
+        {
+            Type = 942936070;
+        }
+
+        void OnCall(mango::Context &context) override
+        {
+            std::this_thread::sleep_for(std::chrono::seconds(1));
+
+            TestMessage reply;
+            reply.setMessage("I'm June!");
+            context.reply = reply.Serialize();
+        }
+    };
+
+    std::shared_ptr<mango::Message> createSlowMessage()
+    {
+        return std::make_shared<SlowMessage>();
+    }
+
+    class FastMessage : public mango::Message
+    {
+    public:
+        FastMessage()
+        {
+            Type = 422050215;
+        }
+
+        void OnCall(mango::Context &context) override
+        {
+            TestMessage reply;
+            reply.setMessage("I'm Lili!");
+            context.reply = reply.Serialize();
+        }
+    };
+
+    std::shared_ptr<mango::Message> createFastMessage()
+    {
+        return std::make_shared<FastMessage>();
+    }
+
     class SharedControl
     {
     private:
@@ -85,6 +130,9 @@ namespace
             if (!isRunning.exchange(true))
             {
                 mango::MessageCreator::registerMessageType(8515, createTestMessage);
+                mango::MessageCreator::registerMessageType(422050215, createFastMessage);
+                mango::MessageCreator::registerMessageType(942936070, createSlowMessage);
+
                 createService();
                 createCaller();
 
@@ -126,6 +174,35 @@ namespace
             auto message = std::dynamic_pointer_cast<TestMessage>(reply);
             EXPECT_NE(message, nullptr);
             EXPECT_EQ(message->getMessage(), "Good to see you, Emma~");
+        }
+
+        void testAsync()
+        {
+            std::queue<std::string> queue;
+
+            std::future<void> fut_1 = std::async(std::launch::async, [&queue]()
+                                                 {
+                                SlowMessage slow;
+                                auto reply = SharedControl::rpc_caller->call(slow);
+                                auto message = std::dynamic_pointer_cast<TestMessage>(reply);
+                                queue.push(message->getMessage());
+                                EXPECT_NE(message, nullptr);
+                                EXPECT_EQ(message->getMessage(), "I'm June!"); });
+
+            std::future<void> fut_2 = std::async(std::launch::async, [&queue]()
+                                                 {
+                                FastMessage slow;
+                                auto reply = SharedControl::rpc_caller->call(slow);
+                                auto message = std::dynamic_pointer_cast<TestMessage>(reply);
+                                queue.push(message->getMessage());
+                                EXPECT_NE(message, nullptr);
+                                EXPECT_EQ(message->getMessage(), "I'm Lili!"); });
+            fut_2.wait();
+            fut_1.wait();
+            auto msg = queue.front();
+            EXPECT_EQ(msg, "I'm Lili!");
+            queue.pop();msg = queue.front();
+            EXPECT_EQ(msg, "I'm June!");
         }
 
         void testCast1K()
@@ -175,6 +252,11 @@ namespace
     TEST_F(RpcTest, testCall)
     {
         testCall();
+    }
+
+    TEST_F(RpcTest, testAsync)
+    {
+        testAsync();
     }
 
     TEST_F(RpcTest, testCast1K)

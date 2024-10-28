@@ -24,7 +24,7 @@ int main(int argc, char *argv[], char *envp[])
     auto p_service = std::dynamic_pointer_cast<ExecutorService>(builder->getResult());
 
     std::future fut = std::async(std::launch::async, []
-                                 { loquat::Epoll::GetInstance().Wait(); });
+                                 { loquat::Epoll::GetInstance()->Wait(); });
 
     spdlog::debug("start service");
 

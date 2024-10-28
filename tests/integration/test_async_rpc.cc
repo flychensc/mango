@@ -89,7 +89,7 @@ namespace
                 createCaller();
 
                 fut = std::async(std::launch::async, []
-                                 { loquat::Epoll::GetInstance().Wait(); });
+                                 { loquat::Epoll::GetInstance()->Wait(); });
             }
         }
 
@@ -97,7 +97,7 @@ namespace
         {
             if (isRunning.exchange(false))
             {
-                loquat::Epoll::GetInstance().Terminate();
+                loquat::Epoll::GetInstance()->Terminate();
                 fut.get();
             }
         }

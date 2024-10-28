@@ -43,12 +43,12 @@ namespace mango
         cycle_timer_ = std::make_shared<CycleTimer>(50);
         cycle_timer_->registerTimeoutCallback([this]()
                                               { pollRpcCallStatus(); });
-        loquat::Epoll::GetInstance().Join(cycle_timer_->TimerFd(), cycle_timer_);
+        loquat::Epoll::GetInstance()->Join(cycle_timer_->TimerFd(), cycle_timer_);
     }
 
     AsyncExecutor::~AsyncExecutor()
     {
-        loquat::Epoll::GetInstance().Leave(cycle_timer_->TimerFd());
+        loquat::Epoll::GetInstance()->Leave(cycle_timer_->TimerFd());
     }
 
     void AsyncExecutor::OnRecv(const std::vector<loquat::Byte> &data)
@@ -177,7 +177,7 @@ namespace mango
         executor_ptr->registerCloseHandler([this](int sock_fd)
                                            { removeExecutor(sock_fd); });
 
-        loquat::Epoll::GetInstance().Join(executor_ptr->Sock(), executor_ptr);
+        loquat::Epoll::GetInstance()->Join(executor_ptr->Sock(), executor_ptr);
         insertExecutor(executor_ptr->Sock(), executor_ptr);
     }
 

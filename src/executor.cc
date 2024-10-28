@@ -118,7 +118,7 @@ namespace mango
         executor_ptr->registerCloseHandler([this](int sock_fd)
                                            { removeExecutor(sock_fd); });
 
-        loquat::Epoll::GetInstance().Join(executor_ptr->Sock(), executor_ptr);
+        loquat::Epoll::GetInstance()->Join(executor_ptr->Sock(), executor_ptr);
         insertExecutor(executor_ptr->Sock(), executor_ptr);
     }
 

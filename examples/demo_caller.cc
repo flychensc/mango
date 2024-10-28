@@ -24,7 +24,7 @@ int main(int argc, char *argv[], char *envp[])
     auto p_caller = std::dynamic_pointer_cast<Caller>(builder->getResult());
 
     std::future fut = std::async(std::launch::async, []
-                                 { loquat::Epoll::GetInstance().Wait(); });
+                                 { loquat::Epoll::GetInstance()->Wait(); });
 
     spdlog::debug("start caller");
 
@@ -40,7 +40,7 @@ int main(int argc, char *argv[], char *envp[])
 
     spdlog::debug("caller stop");
 
-    loquat::Epoll::GetInstance().Terminate();
+    loquat::Epoll::GetInstance()->Terminate();
     fut.get();
     return 0;
 }

@@ -23,7 +23,7 @@ namespace mango
             auto p_sock = std::dynamic_pointer_cast<Caller>(pollable_);
             if (p_sock)
             {
-                loquat::Epoll::GetInstance().Join(p_sock->Sock(), p_sock);
+                loquat::Epoll::GetInstance()->Join(p_sock->Sock(), p_sock);
             }
         }
 

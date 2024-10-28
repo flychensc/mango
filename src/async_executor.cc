@@ -6,7 +6,7 @@
 
 namespace mango
 {
-    CycleTimer::CycleTimer()
+    CycleTimer::CycleTimer(int period_in_msec)
     {
         timer_fd_ = timerfd_create(CLOCK_MONOTONIC, 0);
         if (timer_fd_ == -1)
@@ -18,7 +18,7 @@ namespace mango
         new_value.it_value.tv_sec = 1;
         new_value.it_value.tv_nsec = 0;
         new_value.it_interval.tv_sec = 0;
-        new_value.it_interval.tv_nsec = 50000000;
+        new_value.it_interval.tv_nsec = 1000000 * period_in_msec;
 
         timerfd_settime(timer_fd_, 0, &new_value, nullptr);
     }
@@ -39,8 +39,15 @@ namespace mango
     AsyncExecutor::AsyncExecutor(int listen_fd) : loquat::Connection(Stream::Type::Framed, listen_fd), recv_state_(RecvState::RECV_ID_LENGTH)
     {
         SetBytesNeeded(1);
-        cycle_timer_.registerTimeoutCallback([this]()
-                                             { pollRpcCallStatus(); });
+        cycle_timer_ = std::make_shared<CycleTimer>(50);
+        cycle_timer_->registerTimeoutCallback([this]()
+                                              { pollRpcCallStatus(); });
+        loquat::Epoll::GetInstance().Join(cycle_timer_->TimerFd(), cycle_timer_);
+    }
+
+    AsyncExecutor::~AsyncExecutor()
+    {
+        loquat::Epoll::GetInstance().Leave(cycle_timer_->TimerFd());
     }
 
     void AsyncExecutor::OnRecv(const std::vector<loquat::Byte> &data)
@@ -92,13 +99,15 @@ namespace mango
                 spdlog::debug("message type {}", message->Type);
 
                 // Execute
-                AsyncContext asyncCtx;
-                asyncCtx.future = std::async(std::launch::async, [this, message]
-                                             {
+                auto asyncCtx = std::make_unique<AsyncContext>();
+                asyncCtx->session_id = last_recv_sess_id_;
+                asyncCtx->future = std::async(std::launch::async, [this, message]
+                                              {
                                                 Context context;
                                                 message->OnCall(context);
                                                 context.is_completed = true;
                                                 return context.reply; });
+                asyncContexts_.push_back(std::move(asyncCtx));
 
                 SetBytesNeeded(1);
             }
@@ -110,15 +119,15 @@ namespace mango
 
     void AsyncExecutor::pollRpcCallStatus()
     {
-        for (auto &context : asyncContexts_)
-        {
-            if (context.future.wait_for(std::chrono::seconds(0)) == std::future_status::ready)
+        asyncContexts_.remove_if([this](auto &item)
+                                 {
+            if (item->future.wait_for(std::chrono::seconds(0)) == std::future_status::ready)
             {
-                auto reply = context.future.get();
+                auto reply = item->future.get();
                 if (reply.size() > 0)
                 {
                     // Enqueue Header
-                    Enqueue(packHeader(context.session_id, reply.size()));
+                    Enqueue(packHeader(item->session_id, reply.size()));
                     // Enqueue Reply
                     Enqueue(reply);
 
@@ -128,8 +137,9 @@ namespace mango
                 {
                     spdlog::debug("nothing to async reply");
                 }
+                return true;
             }
-        }
+            return false; });
     }
 
     void AsyncExecutor::OnClose(int sock_fd)

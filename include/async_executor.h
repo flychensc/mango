@@ -21,7 +21,7 @@ namespace mango
     class CycleTimer : public loquat::ReadWritable
     {
     public:
-        CycleTimer();
+        CycleTimer(int period_in_msec);
         ~CycleTimer();
 
         int TimerFd() { return timer_fd_; }
@@ -40,6 +40,7 @@ namespace mango
     {
     public:
         AsyncExecutor(int listen_fd);
+        ~AsyncExecutor();
 
         void OnClose(int sock_fd) override final;
 
@@ -56,8 +57,8 @@ namespace mango
         RecvState recv_state_;
         std::string last_recv_sess_id_;
 
-        CycleTimer cycle_timer_;
-        std::list<AsyncContext> asyncContexts_;
+        std::shared_ptr<CycleTimer> cycle_timer_;
+        std::list<std::unique_ptr<AsyncContext>> asyncContexts_;
     };
 
     class AsyncExecutorService : public loquat::Listener

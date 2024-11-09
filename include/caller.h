@@ -30,6 +30,7 @@ namespace mango
 
     protected:
         void OnRecv(const std::vector<Byte> &data) override final;
+        void OnClose(int sock_fd) override final;
 
     private:
         SessionManager session_manager_;

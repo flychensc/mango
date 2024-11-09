@@ -31,6 +31,19 @@ namespace mango
         sessions_.erase(id);
     }
 
+    void SessionManager::apply(const std::function<void(std::shared_ptr<Session>)> &func)
+    {
+        std::lock_guard<std::mutex> lock(mutex_);
+        for (const auto &pair : sessions_)
+        {
+            const auto &session = pair.second;
+            if (session)
+            {
+                func(session);
+            }
+        }
+    }
+
     std::string SessionManager::generateSessionId()
     {
         auto now = std::chrono::high_resolution_clock::now().time_since_epoch().count();

@@ -77,6 +77,12 @@ namespace mango
         }
     }
 
+    void Caller::OnClose(int sock_fd)
+    {
+        session_manager_.apply([](std::shared_ptr<Session> session)
+                               { session->notify(); });
+    }
+
     void Caller::cast(Message &message)
     {
         spdlog::debug("Caller cast executor");

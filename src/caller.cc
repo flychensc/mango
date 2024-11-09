@@ -79,6 +79,7 @@ namespace mango
 
     void Caller::OnClose(int sock_fd)
     {
+        spdlog::debug("Caller::OnClose");
         session_manager_.apply([](std::shared_ptr<Session> session)
                                { session->notify(); });
     }
@@ -123,7 +124,10 @@ namespace mango
 
         // return reply
         auto reply = MessageCreator::Deserialize(session->getContext().reply);
-        spdlog::debug("reply type {}", reply->Type);
+        if (reply)
+        {
+            spdlog::debug("reply type {}", reply->Type);
+        }
 
         // remove session
         session_manager_.removeSession(session->getId());

@@ -1,6 +1,7 @@
 #include <memory>
 #include <future>
 #include <spdlog/spdlog.h>
+#include <thread>
 #include "caller_builder.h"
 #include "director.h"
 #include "message_creator.h"

@@ -2,6 +2,7 @@
 #include "message_creator.h"
 #include <spdlog/spdlog.h>
 #include <sys/timerfd.h>
+#include <unistd.h>
 #include "loquat/include/epoll.h"
 
 namespace mango

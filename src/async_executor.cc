@@ -9,7 +9,7 @@ namespace mango
 {
     CycleTimer::CycleTimer(int period_in_msec)
     {
-        timer_fd_ = timerfd_create(CLOCK_MONOTONIC, 0);
+        timer_fd_ = timerfd_create(CLOCK_MONOTONIC, TFD_NONBLOCK);
         if (timer_fd_ == -1)
         {
             throw std::runtime_error("AsyncExecutor:timerfd_create");
@@ -32,6 +32,14 @@ namespace mango
 
     void CycleTimer::OnRead(int sock_fd)
     {
+        uint64_t expirations;
+        ssize_t s = read(sock_fd, &expirations, sizeof(expirations));
+        if (s != sizeof(expirations))
+        {
+            spdlog::error("Failed to read timerfd: {}", strerror(errno));
+            return;
+        }
+        spdlog::debug("Timer triggered!");
         if (timeoutCallback_)
         {
             timeoutCallback_();

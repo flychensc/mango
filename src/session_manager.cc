@@ -47,6 +47,12 @@ namespace mango
         }
     }
 
+    size_t SessionManager::count()
+    {
+        std::lock_guard<std::mutex> lock(mutex_);
+        return sessions_.size();
+    }
+
     std::string SessionManager::generateSessionId()
     {
         std::ostringstream oss;

@@ -1,6 +1,7 @@
 #include <cerrno>
 #include <cstring>
 #include <regex>
+#include <stdexcept>
 #include <sys/socket.h>
 #include "pack.h"
 #include "util.h"

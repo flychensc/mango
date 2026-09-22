@@ -2,6 +2,10 @@ cmake_minimum_required(VERSION 3.22.1)
 
 project(mango)
 
+set(CMAKE_CXX_STANDARD 17)
+set(CMAKE_CXX_STANDARD_REQUIRED ON)
+set(CMAKE_CXX_EXTENSIONS OFF)
+
 option(SAMPLE "Enable the sample feature for demonstration purposes." ON)
 option(DEBUG "Enable debug mode for detailed logging and error checking." OFF)
 option(TEST "Enable building and running unit tests using Google Test." ON)

@@ -1,5 +1,8 @@
+#include <cerrno>
+#include <cstring>
 #include <regex>
 #include <sys/socket.h>
+#include "pack.h"
 #include "util.h"
 
 namespace mango
@@ -31,19 +34,39 @@ namespace mango
         }
     }
 
-    std::vector<loquat::Byte> packHeader(const std::string session_id, size_t message_length)
+    std::vector<loquat::Byte> packHeader(const std::string &session_id, size_t message_length)
     {
+        if (session_id.empty() || session_id.size() > kMaxSessionIdLen)
+        {
+            throw std::invalid_argument("packHeader: invalid session_id length");
+        }
+        if (message_length > kMaxMessageLen)
+        {
+            throw std::invalid_argument("packHeader: message too long");
+        }
+
         std::vector<loquat::Byte> header;
+        header.reserve(4 + 1 + 1 + session_id.size() + 4);
 
-        // Length of Session Id
-        header.push_back(session_id.size());
+        // Magic Number (4 bytes, big-endian)
+        header.push_back((kProtocolMagic >> 24) & 0xFFu);
+        header.push_back((kProtocolMagic >> 16) & 0xFFu);
+        header.push_back((kProtocolMagic >> 8)  & 0xFFu);
+        header.push_back( kProtocolMagic        & 0xFFu);
 
-        // Content of Session Id
+        // Version (1 byte)
+        header.push_back(kProtocolVersion);
+
+        // Session ID length + content
+        header.push_back(static_cast<loquat::Byte>(session_id.size()));
         header.insert(header.end(), session_id.begin(), session_id.end());
 
-        // Length of Message
-        header.push_back((message_length >> 8) & 0xFF);
-        header.push_back(message_length & 0xFF);
+        // Message length (4 bytes, big-endian)
+        auto ml = static_cast<uint32_t>(message_length);
+        header.push_back((ml >> 24) & 0xFFu);
+        header.push_back((ml >> 16) & 0xFFu);
+        header.push_back((ml >> 8)  & 0xFFu);
+        header.push_back( ml        & 0xFFu);
 
         return header;
     }

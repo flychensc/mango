@@ -1,18 +1,22 @@
 #include "session_manager.h"
 
-#include <chrono>
-#include <random>
+#include <atomic>
 #include <sstream>
 
 namespace mango
 {
+    namespace
+    {
+        std::atomic<uint64_t> g_session_counter{0};
+    }
+
     std::shared_ptr<Session> SessionManager::createSession()
     {
         std::lock_guard<std::mutex> lock(mutex_);
         auto session = std::make_shared<Session>(generateSessionId());
         if (sessions_.find(session->getId()) != sessions_.end())
         {
-            throw std::runtime_error("Duplicanted session " + session->getId());
+            throw std::runtime_error("Duplicate session " + session->getId());
         }
         sessions_[session->getId()] = session;
         return session;
@@ -21,8 +25,8 @@ namespace mango
     std::shared_ptr<Session> SessionManager::getSession(const std::string &id)
     {
         std::lock_guard<std::mutex> lock(mutex_);
-
-        return (sessions_.find(id) != sessions_.end()) ? sessions_.at(id) : nullptr;
+        auto it = sessions_.find(id);
+        return (it != sessions_.end()) ? it->second : nullptr;
     }
 
     void SessionManager::removeSession(const std::string &id)
@@ -36,23 +40,17 @@ namespace mango
         std::lock_guard<std::mutex> lock(mutex_);
         for (const auto &pair : sessions_)
         {
-            const auto &session = pair.second;
-            if (session)
+            if (pair.second)
             {
-                func(session);
+                func(pair.second);
             }
         }
     }
 
     std::string SessionManager::generateSessionId()
     {
-        auto now = std::chrono::high_resolution_clock::now().time_since_epoch().count();
-        std::random_device rd;
-        std::mt19937 mt(rd());
-        std::uniform_int_distribution<int> dist(1000, 9999);
-
         std::ostringstream oss;
-        oss << now << "-" << dist(mt);
+        oss << g_session_counter.fetch_add(1, std::memory_order_relaxed);
         return oss.str();
     }
 }

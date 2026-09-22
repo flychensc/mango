@@ -29,7 +29,7 @@ namespace mango
         std::shared_ptr<Message> call(Message &message);
 
     protected:
-        void OnRecv(const std::vector<Byte> &data) override final;
+        void OnRecv(std::vector<Byte> data) override final;
         void OnClose(int sock_fd) override final;
 
     private:

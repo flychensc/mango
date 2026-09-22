@@ -21,7 +21,7 @@ namespace mango
         void registerCloseHandler(std::function<void(int)> callback);
 
     protected:
-        void OnRecv(const std::vector<loquat::Byte> &data) override final;
+        void OnRecv(std::vector<loquat::Byte> data) override final;
 
     private:
         std::function<void(int)> close_callback_;

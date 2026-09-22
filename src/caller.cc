@@ -17,7 +17,7 @@ namespace mango
         Bind(address, port);
     }
 
-    void Caller::OnRecv(const std::vector<Byte> &data)
+    void Caller::OnRecv(std::vector<Byte> data)
     {
         switch (recv_state_)
         {

@@ -60,7 +60,7 @@ namespace mango
         loquat::Epoll::GetInstance()->Leave(cycle_timer_->TimerFd());
     }
 
-    void AsyncExecutor::OnRecv(const std::vector<loquat::Byte> &data)
+    void AsyncExecutor::OnRecv(std::vector<loquat::Byte> data)
     {
         switch (recv_state_)
         {

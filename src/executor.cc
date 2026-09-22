@@ -10,7 +10,7 @@ namespace mango
         SetBytesNeeded(1);
     }
 
-    void Executor::OnRecv(const std::vector<loquat::Byte> &data)
+    void Executor::OnRecv(std::vector<loquat::Byte> data)
     {
         switch (recv_state_)
         {

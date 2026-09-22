@@ -1,5 +1,6 @@
 #include "executor.h"
 #include "message_creator.h"
+#include <unistd.h>
 #include <spdlog/spdlog.h>
 #include "loquat/include/epoll.h"
 
@@ -22,7 +23,9 @@ namespace mango
             if (magic != kProtocolMagic)
             {
                 spdlog::error("Invalid protocol magic: {:08x}", magic);
-                Close();
+                int fd = Sock();
+                loquat::Epoll::GetInstance()->Leave(fd);
+                OnClose(fd);
                 return;
             }
             SetBytesNeeded(1);
@@ -38,7 +41,9 @@ namespace mango
             if (data[0] == 0 || data[0] > kMaxSessionIdLen)
             {
                 spdlog::error("Invalid session id length: {}", data[0]);
-                Close();
+                int fd = Sock();
+                loquat::Epoll::GetInstance()->Leave(fd);
+                OnClose(fd);
                 return;
             }
             SetBytesNeeded(data[0]);
@@ -59,7 +64,9 @@ namespace mango
             if (length > kMaxMessageLen)
             {
                 spdlog::error("Message too long: {}", length);
-                Close();
+                int fd = Sock();
+                loquat::Epoll::GetInstance()->Leave(fd);
+                OnClose(fd);
                 return;
             }
             if (length == 0)

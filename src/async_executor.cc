@@ -74,7 +74,10 @@ namespace mango
             if (magic != kProtocolMagic)
             {
                 spdlog::error("Invalid protocol magic: {:08x}", magic);
-                Close();
+                int fd = Sock();
+                loquat::Epoll::GetInstance()->Leave(fd);
+                ::close(fd);
+                OnClose(fd);
                 return;
             }
             SetBytesNeeded(1);
@@ -90,7 +93,10 @@ namespace mango
             if (data[0] == 0 || data[0] > kMaxSessionIdLen)
             {
                 spdlog::error("Invalid session id length: {}", data[0]);
-                Close();
+                int fd = Sock();
+                loquat::Epoll::GetInstance()->Leave(fd);
+                ::close(fd);
+                OnClose(fd);
                 return;
             }
             SetBytesNeeded(data[0]);
@@ -111,7 +117,10 @@ namespace mango
             if (length > kMaxMessageLen)
             {
                 spdlog::error("Message too long: {}", length);
-                Close();
+                int fd = Sock();
+                loquat::Epoll::GetInstance()->Leave(fd);
+                ::close(fd);
+                OnClose(fd);
                 return;
             }
             if (length == 0)

@@ -1,10 +1,23 @@
 #include "caller.h"
 #include "message_creator.h"
 #include "util.h"
+#include <unistd.h>
 #include <spdlog/spdlog.h>
+
+#include "loquat/include/epoll.h"
 
 namespace mango
 {
+    // Helper: actively tear down the connection from within OnRecv.
+    // loquat has no Close(), so we Leave epoll, close the fd, and
+    // trigger OnClose manually so pending sessions get notified.
+    auto destroyConnection = [](auto *self)
+    {
+        int fd = self->Sock();
+        loquat::Epoll::GetInstance()->Leave(fd);
+        ::close(fd);
+        self->OnClose(fd);
+    };
     Caller::Caller(const std::string &unix_path) : loquat::Connector(Stream::Type::Framed, determineDomain(unix_path)), recv_state_(RecvState::RECV_MAGIC)
     {
         SetBytesNeeded(4);
@@ -19,6 +32,17 @@ namespace mango
 
     void Caller::OnRecv(std::vector<Byte> data)
     {
+        // Helper: actively tear down the connection from within OnRecv.
+        // loquat has no Close(), so we Leave epoll (prevent further events)
+        // and trigger OnClose manually so pending sessions get notified.
+        // Do NOT call ::close(fd) here — Connector/Connection destructor handles it.
+        auto destroyConnection = [](auto *self)
+        {
+            int fd = self->Sock();
+            loquat::Epoll::GetInstance()->Leave(fd);
+            self->OnClose(fd);
+        };
+
         switch (recv_state_)
         {
         case RecvState::RECV_MAGIC: {
@@ -29,7 +53,7 @@ namespace mango
             if (magic != kProtocolMagic)
             {
                 spdlog::error("Invalid protocol magic: {:08x}, expected {:08x}", magic, kProtocolMagic);
-                Close();
+                destroyConnection(this);
                 return;
             }
             SetBytesNeeded(1);
@@ -49,7 +73,7 @@ namespace mango
             if (data[0] == 0 || data[0] > kMaxSessionIdLen)
             {
                 spdlog::error("Invalid session id length: {}", data[0]);
-                Close();
+                destroyConnection(this);
                 return;
             }
             SetBytesNeeded(data[0]);
@@ -71,7 +95,7 @@ namespace mango
             if (length > kMaxMessageLen)
             {
                 spdlog::error("Message too long: {} (max {})", length, kMaxMessageLen);
-                Close();
+                destroyConnection(this);
                 return;
             }
             if (length == 0)

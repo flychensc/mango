@@ -8,7 +8,7 @@ namespace
     public:
         TestMessage()
         {
-            Type = 0x12345678;
+            setType(0x12345678);
             setBody("TEST-MESSAGE");
         }
 
@@ -44,7 +44,7 @@ namespace
         mango::Message new_message;
         new_message.Deserialize(data);
 
-        EXPECT_EQ(new_message.Type, message.Type);
+        EXPECT_EQ(new_message.getType(), message.getType());
         EXPECT_EQ(new_message.Serialize(), message.Serialize());
     }
 
@@ -57,7 +57,7 @@ namespace
 
         auto new_message = mango::MessageCreator::Deserialize(data);
 
-        EXPECT_EQ(new_message->Type, message.Type);
+        EXPECT_EQ(new_message->getType(), message.getType());
         EXPECT_EQ(new_message->Serialize(), message.Serialize());
     }
 }

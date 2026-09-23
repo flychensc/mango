@@ -1,5 +1,6 @@
 #pragma once
 
+#include <cstdint>
 #include "context.h"
 
 namespace mango
@@ -7,7 +8,11 @@ namespace mango
     class Message
     {
     public:
-        u_int32_t Type;
+        Message() : Type(0) {}
+        virtual ~Message() = default;
+
+        uint32_t getType() const { return Type; }
+        void setType(uint32_t t) { Type = t; }
 
         /**
          * @brief Serialize the message
@@ -25,19 +30,13 @@ namespace mango
          * @brief Handle when receiving the message
          * @param context Message context
          */
-        virtual void OnCall(Context &context) {}
+        virtual void OnCall([[maybe_unused]] Context &context) {}
 
     protected:
-        /**
-         * @brief Set the message body
-         * @param body The message body
-         */
-        void setBody(const std::vector<Byte> body) { body_ = body; }
-        /**
-         * @brief Get the message body
-         * @return The message body
-         */
-        std::vector<Byte> getBody() { return body_; }
+        uint32_t Type;
+
+        void setBody(const std::vector<Byte> &body) { body_ = body; }
+        const std::vector<Byte> &getBody() const { return body_; }
 
     private:
         std::vector<Byte> body_;

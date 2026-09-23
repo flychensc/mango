@@ -9,7 +9,7 @@
 
 using namespace mango;
 
-int main(int argc, char *argv[], char *envp[])
+int main([[maybe_unused]] int argc, [[maybe_unused]] char *argv[], [[maybe_unused]] char *envp[])
 {
     spdlog::set_level(spdlog::level::debug);
 

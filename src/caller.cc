@@ -1,87 +1,136 @@
 #include "caller.h"
 #include "message_creator.h"
 #include "util.h"
+#include <unistd.h>
 #include <spdlog/spdlog.h>
+
+#include "loquat/include/epoll.h"
 
 namespace mango
 {
-    Caller::Caller(const std::string &unix_path) : loquat::Connector(Stream::Type::Framed, determineDomain(unix_path)), recv_state_(RecvState::RECV_ID_LENGTH)
+    // Helper: actively tear down the connection from within OnRecv.
+    // loquat has no Close(), so we Leave epoll, close the fd, and
+    // trigger OnClose manually so pending sessions get notified.
+    auto destroyConnection = [](auto *self)
     {
-        SetBytesNeeded(1);
+        int fd = self->Sock();
+        loquat::Epoll::GetInstance()->Leave(fd);
+        ::close(fd);
+        self->OnClose(fd);
+    };
+    Caller::Caller(const std::string &unix_path) : loquat::Connector(Stream::Type::Framed, determineDomain(unix_path)), recv_state_(RecvState::RECV_MAGIC)
+    {
+        SetBytesNeeded(4);
         Bind(unix_path);
     }
 
-    Caller::Caller(const std::string &address, int port) : loquat::Connector(Stream::Type::Framed, determineDomain(address)), recv_state_(RecvState::RECV_ID_LENGTH)
+    Caller::Caller(const std::string &address, int port) : loquat::Connector(Stream::Type::Framed, determineDomain(address)), recv_state_(RecvState::RECV_MAGIC)
     {
-        SetBytesNeeded(1);
+        SetBytesNeeded(4);
         Bind(address, port);
     }
 
     void Caller::OnRecv(std::vector<Byte> data)
     {
+        // Helper: actively tear down the connection from within OnRecv.
+        // loquat has no Close(), so we Leave epoll (prevent further events)
+        // and trigger OnClose manually so pending sessions get notified.
+        // Do NOT call ::close(fd) here — Connector/Connection destructor handles it.
+        auto destroyConnection = [](auto *self)
+        {
+            int fd = self->Sock();
+            loquat::Epoll::GetInstance()->Leave(fd);
+            self->OnClose(fd);
+        };
+
         switch (recv_state_)
         {
-        case RecvState::RECV_ID_LENGTH:
-            spdlog::debug("RECV_ID_LENGTH");
-            // action
+        case RecvState::RECV_MAGIC: {
+            uint32_t magic = (uint32_t(data[0] & 0xFFu) << 24) |
+                             (uint32_t(data[1] & 0xFFu) << 16) |
+                             (uint32_t(data[2] & 0xFFu) << 8)  |
+                              uint32_t(data[3] & 0xFFu);
+            if (magic != kProtocolMagic)
             {
-                SetBytesNeeded(data[0]);
+                spdlog::error("Invalid protocol magic: {:08x}, expected {:08x}", magic, kProtocolMagic);
+                destroyConnection(this);
+                return;
             }
-            // next state
-            recv_state_ = RecvState::RECV_ID_VALUE;
+            SetBytesNeeded(1);
+            recv_state_ = RecvState::RECV_VERSION;
             break;
-
-        case RecvState::RECV_ID_VALUE:
-            spdlog::debug("RECV_ID_VALUE");
-            // action
+        }
+        case RecvState::RECV_VERSION: {
+            if (data[0] != kProtocolVersion)
             {
-                last_recv_sess_id_.assign(data.begin(), data.end());
-                SetBytesNeeded(2);
-
-                spdlog::debug("last_recv_sess_id_ {}", last_recv_sess_id_);
+                spdlog::warn("Unsupported protocol version: {}, expected {}", data[0], kProtocolVersion);
             }
-            // next state
-            recv_state_ = RecvState::RECV_MSG_LENGTH;
-            break;
-
-        case RecvState::RECV_MSG_LENGTH:
-            spdlog::debug("RECV_MSG_LENGTH");
-            // action
-            {
-                u_int16_t length = (((data[0] & 0xFFU) << 8) | (data[1] & 0xFFU));
-                SetBytesNeeded(length);
-
-                spdlog::debug("Message length {}", length);
-            }
-            // next state
-            recv_state_ = RecvState::RECV_MSG_VALUE;
-            break;
-
-        case RecvState::RECV_MSG_VALUE:
-            spdlog::debug("RECV_MSG_VALUE");
-            // action
-            {
-                // locate session
-                auto session = session_manager_.getSession(last_recv_sess_id_);
-                if (session)
-                {
-                    session->getContext().reply = data;
-                    // notify
-                    session->notify();
-                }
-                SetBytesNeeded(1);
-            }
-            // next state
+            SetBytesNeeded(1);
             recv_state_ = RecvState::RECV_ID_LENGTH;
             break;
+        }
+        case RecvState::RECV_ID_LENGTH: {
+            if (data[0] == 0 || data[0] > kMaxSessionIdLen)
+            {
+                spdlog::error("Invalid session id length: {}", data[0]);
+                destroyConnection(this);
+                return;
+            }
+            SetBytesNeeded(data[0]);
+            recv_state_ = RecvState::RECV_ID_VALUE;
+            break;
+        }
+        case RecvState::RECV_ID_VALUE: {
+            last_recv_sess_id_.assign(data.begin(), data.end());
+            spdlog::debug("session id: {}", last_recv_sess_id_);
+            SetBytesNeeded(4);
+            recv_state_ = RecvState::RECV_MSG_LENGTH;
+            break;
+        }
+        case RecvState::RECV_MSG_LENGTH: {
+            uint32_t length = (uint32_t(data[0] & 0xFFu) << 24) |
+                              (uint32_t(data[1] & 0xFFu) << 16) |
+                              (uint32_t(data[2] & 0xFFu) << 8)  |
+                               uint32_t(data[3] & 0xFFu);
+            if (length > kMaxMessageLen)
+            {
+                spdlog::error("Message too long: {} (max {})", length, kMaxMessageLen);
+                destroyConnection(this);
+                return;
+            }
+            if (length == 0)
+            {
+                SetBytesNeeded(4);
+                recv_state_ = RecvState::RECV_MAGIC;
+                break;
+            }
+            SetBytesNeeded(length);
+            recv_state_ = RecvState::RECV_MSG_VALUE;
+            break;
+        }
+        case RecvState::RECV_MSG_VALUE: {
+            auto session = session_manager_.getSession(last_recv_sess_id_);
+            if (session)
+            {
+                session->getContext().reply = data;
+                session->notify();
+            }
+            else
+            {
+                spdlog::debug("No session found for id {}, discarding reply (likely timed out)", last_recv_sess_id_);
+            }
+            SetBytesNeeded(4);
+            recv_state_ = RecvState::RECV_MAGIC;
+            break;
+        }
         }
     }
 
     void Caller::OnClose(int sock_fd)
     {
-        spdlog::debug("Caller::OnClose");
+        spdlog::debug("Caller connection {} closed, notifying {} pending sessions", sock_fd, session_manager_.count());
         session_manager_.apply([](std::shared_ptr<Session> session)
-                               { session->notify(); });
+                               { session->notifyWithError(ErrorCode::CONNECTION_CLOSED, "Connection closed before reply received"); });
     }
 
     void Caller::cast(Message &message)
@@ -104,7 +153,7 @@ namespace mango
         session_manager_.removeSession(session->getId());
     }
 
-    std::shared_ptr<Message> Caller::call(Message &message)
+    std::shared_ptr<Message> Caller::call(Message &message, std::chrono::milliseconds timeout)
     {
         spdlog::debug("Caller call executor");
 
@@ -112,27 +161,39 @@ namespace mango
 
         {
             std::lock_guard<std::mutex> lock(mutex_);
-            // Serialize Message
             auto data = message.Serialize();
-            // Enqueue Header
             Enqueue(packHeader(session->getId(), data.size()));
-            // Enqueue Message
             Enqueue(data);
         }
-        // wait reply
-        session->wait();
 
-        // return reply
-        auto reply = MessageCreator::Deserialize(session->getContext().reply);
-        if (reply)
+        // wait reply with timeout
+        bool ok = session->wait_for(timeout);
+
+        auto &ctx = session->getContext();
+        if (!ok)
         {
-            spdlog::debug("reply type {}", reply->Type);
+            spdlog::error("RPC call timed out for session {}", session->getId());
+            session_manager_.removeSession(session->getId());
+            return nullptr;
+        }
+        if (ctx.error_code != ErrorCode::OK)
+        {
+            spdlog::error("RPC call failed for session {}: {}", session->getId(), ctx.error_message);
+            session_manager_.removeSession(session->getId());
+            return nullptr;
         }
 
-        // remove session
-        session_manager_.removeSession(session->getId());
+        auto reply = MessageCreator::Deserialize(ctx.reply);
+        if (!reply)
+        {
+            spdlog::error("Failed to deserialize reply for session {}", session->getId());
+        }
+        else
+        {
+            spdlog::debug("reply type {}", reply->getType());
+        }
 
-        // return reply
+        session_manager_.removeSession(session->getId());
         return reply;
     }
 }

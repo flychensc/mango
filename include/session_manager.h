@@ -16,6 +16,7 @@ namespace mango
         std::shared_ptr<Session> getSession(const std::string &id);
         void removeSession(const std::string &id);
         void apply(const std::function<void(std::shared_ptr<Session>)> &func);
+        size_t count();
 
     private:
         static std::string generateSessionId();

@@ -6,6 +6,7 @@
 #include "message.h"
 #include "pack.h"
 #include "session_manager.h"
+#include "context.h"
 #include "loquat/include/connector.h"
 
 namespace mango
@@ -24,9 +25,11 @@ namespace mango
         /**
          * @brief Send messages, and wait the reply
          * @param message The entity of request message
-         * @return The reply message
+         * @param timeout Maximum time to wait for the reply (default 10s)
+         * @return The reply message, or nullptr on timeout / error
          */
-        std::shared_ptr<Message> call(Message &message);
+        std::shared_ptr<Message> call(Message &message,
+                                      std::chrono::milliseconds timeout = std::chrono::seconds(10));
 
     protected:
         void OnRecv(std::vector<Byte> data) override final;

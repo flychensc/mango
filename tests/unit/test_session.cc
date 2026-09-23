@@ -138,7 +138,7 @@ namespace
         ThreadPool pool(10);
         mango::SessionManager sessMgr;
 
-        pool.apply([&sessMgr](size_t id)
+        pool.apply([&sessMgr]([[maybe_unused]] size_t id)
                    {
             auto sess = sessMgr.createSession();
             sess->wait();

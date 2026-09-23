@@ -1,86 +1,108 @@
 #include "executor.h"
 #include "message_creator.h"
+#include <unistd.h>
 #include <spdlog/spdlog.h>
 #include "loquat/include/epoll.h"
 
 namespace mango
 {
-    Executor::Executor(int listen_fd) : loquat::Connection(Stream::Type::Framed, listen_fd), recv_state_(RecvState::RECV_ID_LENGTH)
+    Executor::Executor(int listen_fd) : loquat::Connection(Stream::Type::Framed, listen_fd), recv_state_(RecvState::RECV_MAGIC)
     {
-        SetBytesNeeded(1);
+        SetBytesNeeded(4);
     }
 
     void Executor::OnRecv(std::vector<loquat::Byte> data)
     {
         switch (recv_state_)
         {
-        case RecvState::RECV_ID_LENGTH:
-            spdlog::debug("RECV_ID_LENGTH");
-            // action
+        case RecvState::RECV_MAGIC: {
+            uint32_t magic = (uint32_t(data[0] & 0xFFu) << 24) |
+                             (uint32_t(data[1] & 0xFFu) << 16) |
+                             (uint32_t(data[2] & 0xFFu) << 8)  |
+                              uint32_t(data[3] & 0xFFu);
+            if (magic != kProtocolMagic)
             {
-                SetBytesNeeded(data[0]);
+                spdlog::error("Invalid protocol magic: {:08x}", magic);
+                int fd = Sock();
+                loquat::Epoll::GetInstance()->Leave(fd);
+                OnClose(fd);
+                return;
             }
-            // next state
-            recv_state_ = RecvState::RECV_ID_VALUE;
+            SetBytesNeeded(1);
+            recv_state_ = RecvState::RECV_VERSION;
             break;
-
-        case RecvState::RECV_ID_VALUE:
-            spdlog::debug("RECV_ID_VALUE");
-            // action
-            {
-                last_recv_sess_id_.assign(data.begin(), data.end());
-                SetBytesNeeded(2);
-
-                spdlog::debug("last_recv_sess_id_ {}", last_recv_sess_id_);
-            }
-            // next state
-            recv_state_ = RecvState::RECV_MSG_LENGTH;
-            break;
-
-        case RecvState::RECV_MSG_LENGTH:
-            spdlog::debug("RECV_MSG_LENGTH");
-            // action
-            {
-                u_int16_t length = (((data[0] & 0xFFU) << 8) | (data[1] & 0xFFU));
-                SetBytesNeeded(length);
-
-                spdlog::debug("Message length {}", length);
-            }
-            // next state
-            recv_state_ = RecvState::RECV_MSG_VALUE;
-            break;
-
-        case RecvState::RECV_MSG_VALUE:
-            spdlog::debug("RECV_MSG_VALUE");
-            // action
-            {
-                // Deserialize Message
-                auto message = MessageCreator::Deserialize(data);
-                spdlog::debug("message type {}", message->Type);
-
-                // Execute
-                Context context;
-                message->OnCall(context);
-
-                if (context.reply.size() > 0)
-                {
-                    // Enqueue Header
-                    Enqueue(packHeader(last_recv_sess_id_, context.reply.size()));
-                    // Enqueue Reply
-                    Enqueue(context.reply);
-                    context.is_completed = true;
-
-                    spdlog::debug("reply {} bytes", context.reply.size());
-                }
-                else
-                {
-                    spdlog::debug("nothing to reply");
-                }
-                SetBytesNeeded(1);
-            }
-            // next state
+        }
+        case RecvState::RECV_VERSION: {
+            SetBytesNeeded(1);
             recv_state_ = RecvState::RECV_ID_LENGTH;
             break;
+        }
+        case RecvState::RECV_ID_LENGTH: {
+            if (data[0] == 0 || data[0] > kMaxSessionIdLen)
+            {
+                spdlog::error("Invalid session id length: {}", data[0]);
+                int fd = Sock();
+                loquat::Epoll::GetInstance()->Leave(fd);
+                OnClose(fd);
+                return;
+            }
+            SetBytesNeeded(data[0]);
+            recv_state_ = RecvState::RECV_ID_VALUE;
+            break;
+        }
+        case RecvState::RECV_ID_VALUE: {
+            last_recv_sess_id_.assign(data.begin(), data.end());
+            SetBytesNeeded(4);
+            recv_state_ = RecvState::RECV_MSG_LENGTH;
+            break;
+        }
+        case RecvState::RECV_MSG_LENGTH: {
+            uint32_t length = (uint32_t(data[0] & 0xFFu) << 24) |
+                              (uint32_t(data[1] & 0xFFu) << 16) |
+                              (uint32_t(data[2] & 0xFFu) << 8)  |
+                               uint32_t(data[3] & 0xFFu);
+            if (length > kMaxMessageLen)
+            {
+                spdlog::error("Message too long: {}", length);
+                int fd = Sock();
+                loquat::Epoll::GetInstance()->Leave(fd);
+                OnClose(fd);
+                return;
+            }
+            if (length == 0)
+            {
+                SetBytesNeeded(4);
+                recv_state_ = RecvState::RECV_MAGIC;
+                break;
+            }
+            SetBytesNeeded(length);
+            recv_state_ = RecvState::RECV_MSG_VALUE;
+            break;
+        }
+        case RecvState::RECV_MSG_VALUE: {
+            auto message = MessageCreator::Deserialize(data);
+            if (!message)
+            {
+                spdlog::error("Unknown message type, dropping");
+                SetBytesNeeded(4);
+                recv_state_ = RecvState::RECV_MAGIC;
+                break;
+            }
+            spdlog::debug("message type {}", message->getType());
+
+            Context context;
+            message->OnCall(context);
+
+            if (context.reply.size() > 0)
+            {
+                Enqueue(packHeader(last_recv_sess_id_, context.reply.size()));
+                Enqueue(context.reply);
+                spdlog::debug("reply {} bytes", context.reply.size());
+            }
+            SetBytesNeeded(4);
+            recv_state_ = RecvState::RECV_MAGIC;
+            break;
+        }
         }
     }
 

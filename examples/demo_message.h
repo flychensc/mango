@@ -22,7 +22,7 @@ namespace mango
             setBody("PONG");
         }
 
-        void OnCall(Context &context) override
+        void OnCall([[maybe_unused]] Context &context) override
         {
             std::cout << "PONG" << std::endl;
         }

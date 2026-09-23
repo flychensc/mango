@@ -17,6 +17,10 @@ else()
     set(CMAKE_BUILD_TYPE Release)
 endif()
 
+if (CMAKE_CXX_COMPILER_ID MATCHES "GNU|Clang")
+    add_compile_options(-Wall -Wextra -Wpedantic -Wconversion)
+endif()
+
 if (TEST)
     enable_testing()
     add_subdirectory(tests)

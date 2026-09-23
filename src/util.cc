@@ -64,10 +64,10 @@ namespace mango
 
         // Message length (4 bytes, big-endian)
         auto ml = static_cast<uint32_t>(message_length);
-        header.push_back((ml >> 24) & 0xFFu);
-        header.push_back((ml >> 16) & 0xFFu);
-        header.push_back((ml >> 8)  & 0xFFu);
-        header.push_back( ml        & 0xFFu);
+        header.push_back(static_cast<loquat::Byte>((ml >> 24) & 0xFFu));
+        header.push_back(static_cast<loquat::Byte>((ml >> 16) & 0xFFu));
+        header.push_back(static_cast<loquat::Byte>((ml >> 8)  & 0xFFu));
+        header.push_back(static_cast<loquat::Byte>( ml        & 0xFFu));
 
         return header;
     }

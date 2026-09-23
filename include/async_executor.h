@@ -28,7 +28,7 @@ namespace mango
         int TimerFd() { return timer_fd_; }
 
         virtual void OnRead(int sock_fd) override final;
-        void OnWrite(int sock_fd) override final {}
+        void OnWrite([[maybe_unused]] int sock_fd) override final {}
 
         void registerTimeoutCallback(std::function<void(void)> callback) { timeoutCallback_ = callback; }
 

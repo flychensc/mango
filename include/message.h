@@ -30,7 +30,7 @@ namespace mango
          * @brief Handle when receiving the message
          * @param context Message context
          */
-        virtual void OnCall(Context &context) {}
+        virtual void OnCall([[maybe_unused]] Context &context) {}
 
     protected:
         uint32_t Type;

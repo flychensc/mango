@@ -9,10 +9,10 @@ namespace mango
     {
         std::vector<Byte> stream;
 
-        stream.push_back((Type >> 24) & 0xFF);
-        stream.push_back((Type >> 16) & 0xFF);
-        stream.push_back((Type >> 8) & 0xFF);
-        stream.push_back(Type & 0xFF);
+        stream.push_back(static_cast<Byte>((Type >> 24) & 0xFF));
+        stream.push_back(static_cast<Byte>((Type >> 16) & 0xFF));
+        stream.push_back(static_cast<Byte>((Type >> 8) & 0xFF));
+        stream.push_back(static_cast<Byte>(Type & 0xFF));
 
         stream.insert(stream.end(), body_.begin(), body_.end());
 
